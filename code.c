@@ -1,139 +1,151 @@
-#include <iostream>
+
+#include<stdio.h>
 #include<math.h>
-using namespace std;
 
+int input[50],temp[50];
+int r,m;
 
-
-int data[50],r,temp[50];
-int power(int h)
+int power(int a)
 {
-	int i,p=1;
-	for(i=1;i<=h;i++)
-	{
-		p=p*2;
-	}
-	return(p);
+	int j,x=1;
+	if(a==0)
+		return 1;
+	for(j=1;j<=a;j++)
+		x*=2;
+	return x;
 }
 
 
-
-int calc_paritybits(int k, int r)
+void markChkBits()
 {
-	int n=1,i,cnt_ones;
-	int j=1,errSum = 0;
-
-
-	while(n<power(r))
+	int j,k,l;
+	// mark check bits positions with 0's
+	k=0;
+	l=m-1;
+	for(j=1;j<=(m+r);j++)
 	{
-		i=n;
-		cnt_ones=0;
-		while(i<=(k+r))
+		if(power(k)==j)
 		{
-			for(j=0;j<n;j++)
-			{
-				if(temp[i+j]==1)
-					cnt_ones++;
-			}
-			i=i+2*n;
+			temp[j]=0;
+			k++;
 		}
-		if((cnt_ones%2)!=0)
-		{
-			temp[n]=1;
-			errSum += n ;
-		}
-
 		else
-			temp[n]=0;
-	       n=n*2;
+			temp[j]=input[l--]; // LSB to MSB
 	}
-      return errSum;
 }
 
-void hammingcode(int k)
+
+int  calXor()
 {
-      int i,j,d=0;
-       r=1;
-
-      while(k > (power(r)-r-1))
-		r++;
-
-     j = k;
-     for(i=1;i<=(k+r);i++)
+	int i = 1,t = 0;
+	while(i <= (r + m))
 	{
-		if(i==power(d))
-		  {
-		    temp[i]=0;
-		    d++;
-		  }
-		else
-		  temp[i]=data[j--];
+		if(temp[i] == 1)
+			t = t ^ i;
+		i++;
 	}
 
-	cout<< "\n no. of parity bits r = "<< r;
-	calc_paritybits(k,r);
+       return t;
 }
 
-main()
+
+void  calChkBits()
 {
+       int t = 0,i,j;
+       int cb[25];
 
-	int k,i,p;
-	int flg =0,errPos =0 ;
+       t = calXor();
 
-	cout<<"no of databits\n";
-	cin>>k;
-	cout<<"enter the data to be transmitted\n";
-	for(i=k;i>=1;i--)
+       i = 0;
+       while(i < r)
+       {
+		cb[i++] = t % 2;
+		t = t/2;
+       }
 
-		cin>>data[i];
-	hammingcode(k);
+      // place check bits in the data
+      i = 0;
+      while(i < r)
+      {
+	j = power(i);
+	temp[j] = cb[i++];
+      }
+}
 
-	cout<<"\nthe hamming code for data is\n";
 
-	for(i=1;i<=(k+r);i++)
-		cout<<temp[i];
+void  main()
+{
+	int i,k;
+	int errPos=0,flag;
+
+	printf("\nEnter the number of bits in the input:\n");
+	scanf("%d",&m);
+
+	// find the number of check bits r
+	i = 1;
+	while ((power(i) -1)  < (m+i))
+		i++;
+	r = i;
+
+       //input the data bits
+	printf("\nEnter the bits:\n");
+	for(i=0;i<m;i++)
+		scanf("%d",&input[i]);
+
+	//mark check bits
+	markChkBits();
+
+	// claculate check bits
+	calChkBits();
 
 
+	printf("\n\n\n=====At Sender=====\n\nThe message transmitted is:\n");
+	for(i=m+r;i>0;i--)
+		printf("%d ",temp[i]);
 
-     cout<<"\n enter the recieved  data:\n";
+	printf("\n\n\n=====At receiver=====\n\n");
 
-	for (i=1; i <= k+r; i++)
-		cin>>temp[i];
+	printf("\nEnter the recived bits(only single bit error): \n");
 
-	errPos =  calc_paritybits(k,r); ;
+	for(i = m+r; i > 0; i--)
+		scanf("%d",&temp[i]);
 
-	if (errPos != 0)
+	if((errPos = calXor()) != 0)
 	{
-
-		for(i=1;i < power(r) ; i = i * 2)
+		flag = 0;
+		for(i=r-1;i>=0;i--)
 		{
-		       if(errPos == i)
-			{
-				flg = 1;
-				break;
-			 }
-
+			if(power(i) ==errPos)
+				{flag = 1; break;}
 		}
-
-		if(flg == 1)
-
-			cout<<" Parity bit P%d  is corrupted, data is fine"<< errPos;
+		if(flag == 0)
+		{
+			printf("\nError in data \n");
+			printf("Error position is :%d\n", errPos);
+			printf("\nCorrected data : \n");
+			temp[errPos] = !(temp[errPos]);
+			for(i=m+r;i>0;i--)
+				printf("%d ",temp[i]);
+		}
 		else
 		{
-		    cout<<"Data bit is corrupted. pos = D"<< errPos;
+			printf("Error in check bits. Data is fine.\n");
+		}
+	}
+	else
+		printf("\n No error\n");
 
-		temp[errPos] = !(temp[errPos]);
+	printf("\nThe data :\n");
+	k = r - 1;
+	for(i= m + r; i > 0 ; i--)
+	{
+		if(power(k) == i)
+			k--;
+		else
+			printf("%d ", temp[i]);
+	}
 
-		cout<<"\nCorrected data with parity bits\n";
-           for(i=1;i<=(k+r);i++)
-			cout<<temp[i];
-
- 		}
-	 }
-
-	 else
-	     cout<<"No error";
-return 0;
-}
+     }
 
 
 
